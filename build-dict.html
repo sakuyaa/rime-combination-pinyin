@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="author" content="sakuyaa@github" />
+		<title>build combination_pinyin.dict.yaml</title>
+		<style type="text/css">
+body {
+	background-color: #dcdcdc;
+}
+#tips {
+	align-items: center;
+	display: flex;
+	height: 100%;
+	justify-content: center;
+	left: 0;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: -1;
+}
+		</style>
+	</head>
+	<body>
+		<a id="download" hidden="hidden"></a>
+		<div>
+汉语拆字字典：
+<a href="https://github.com/kfcd/chaizi/raw/master/chaizi-jt.txt">简体</a>
+(<a href="https://cdn.jsdelivr.net/gh/kfcd/chaizi@master/chaizi-jt.txt">CDN</a>)、
+<a href="https://github.com/kfcd/chaizi/raw/master/chaizi-ft.txt">繁體</a>
+(<a href="https://cdn.jsdelivr.net/gh/kfcd/chaizi@master/chaizi-ft.txt">CDN</a>)
+（来源：<a href="https://github.com/kfcd/chaizi">https://github.com/kfcd/chaizi</a>）
+<br><br>
+汉字拼音数据：
+<a href="https://github.com/mozillazg/pinyin-data/raw/master/pinyin.txt">pinyin.txt</a>
+(<a href="https://cdn.jsdelivr.net/gh/mozillazg/pinyin-data@master/pinyin.txt">CDN</a>)
+（来源：<a href="https://github.com/mozillazg/pinyin-data">https://github.com/mozillazg/pinyin-data</a>）
+		</div>
+		<div id="tips">拖放汉语拆字字典和汉字拼音数据至此以生成字典文件</div>
+		<script type="text/javascript">
+'use strict';
+
+//拆字对照表、拼音对照表
+let componentMap, pinyinMap;
+//声调
+const PHONETIC_SYMBOL = {
+	'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a',
+	'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e',
+	'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
+	'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o',
+	'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u',
+	'ü': 'v', 'ǖ': 'v', 'ǘ': 'v', 'ǚ': 'v', 'ǜ': 'v',
+	//以下声调对应的汉字不组合成其他字，故不进行替换处理
+	/*'ń': 'n',   //咹、哽、唔、嗯
+	'ň': 'n',   //㕶、嗯
+	'ǹ': 'n',   //哏、嗯、𠮾
+	'm̄': 'm',   //嘸，length == 2，避免正则出错
+	'ḿ': 'm',   //呒、呣、唔、嘸
+	'm̀': 'm',   //呣，length == 2
+	//欸、誒
+	'ê': 'e',   
+	'ê̄': 'e',   //length == 2
+	'ế': 'e',
+	'ê̌': 'e',   //length == 2
+	'ề': 'e'*/
+};
+
+//拖放文件和监听事件
+addEventListener('dragover', e => {
+	e.stopPropagation();
+	e.preventDefault();
+});
+addEventListener('drop', e => {
+	e.stopPropagation();
+	e.preventDefault();
+	readFiles(e.dataTransfer.files);
+});
+
+//读取文件
+let readFile = file => {
+	return new Promise((resolve, reject) => {
+		let reader = new FileReader();
+		reader.onload = e => {
+			resolve(e.target.result);
+		}
+		reader.readAsText(file);
+	});
+};
+let readFiles = async files => {
+	if (files.length < 2) {
+		alert('需要汉语拆字字典和汉字拼音数据');
+		return;
+	}
+	componentMap = new Map();
+	pinyinMap = new Map();
+	let chaizi = false, pinyin = false;
+	for (let file of files) {
+		if (file.name.startsWith('chaizi')) {   //汉语拆字字典
+			chaizi = await readFile(file);
+			if (chaizi) {
+				readChaizi(chaizi);
+				chaizi = true;
+			}
+		}
+		if (file.name.startsWith('pinyin')) {   //汉字拼音数据
+			pinyin = await readFile(file);
+			if (pinyin) {
+				readPinyin(pinyin);
+				pinyin = true;
+			}
+		}
+	}
+	if (!chaizi) {
+		alert('需要汉语拆字字典');
+		return;
+	}
+	if (!pinyin) {
+		alert('需要汉字拼音数据');
+		return;
+	}
+	generateDict();
+};
+//读取汉语拆字字典
+let readChaizi = text => {
+	let componentSet;
+	for (let line of text.split('\n')) {
+		let array = line.trim().split('\t');
+		if (array.length < 2 || array[0] == '□') {   //排除汉语拆字字典中有问题的字
+			continue;
+		}
+		componentSet = componentMap.get(array[0]);   //避免重复字
+		if (!componentSet) {
+			componentSet = new Set();
+		}
+		array.slice(1).forEach(component => componentSet.add(component));
+		componentMap.set(array[0], componentSet);
+	}
+};
+//读取汉字拼音数据
+let readPinyin = text => {
+	const RE_PINYIN = new RegExp('U\\+([0-9A-F]+): ([^ ]+) ', 'g');
+	const RE_PHONETIC_SYMBOL = new RegExp('([' + Object.keys(PHONETIC_SYMBOL).join('') + '])', 'g');
+	let match, pinyins, pinyinSet;
+	while ((match = RE_PINYIN.exec(text)) != null) {
+		pinyins = match[2].replace(RE_PHONETIC_SYMBOL, word => PHONETIC_SYMBOL[word]);   //替换带声调字符为正常字符
+		pinyinSet = new Set();
+		for (let pinyin of pinyins.split(',')) {
+			//规范化输入法拼音
+			if (pinyin == 'm') {
+				pinyinSet.add('mu');
+			} else if (pinyin == 'n' || pinyin == 'ng') {
+				pinyinSet.add('en');
+			} else {
+				pinyinSet.add(pinyin);
+			}
+		}
+		if (pinyinSet.size) {
+			pinyinMap.set(String.fromCodePoint('0x' + match[1]), pinyinSet);
+		}
+	}
+};
+
+//生成字典
+let generateDict = () => {
+	let today = new Date();
+	let text = 
+`# Rime dictionary
+# encoding: utf-8
+#
+# Combination Pinyin - 組合字拼音
+#
+#   sakuyaa@github
+#
+# Thanks to the following works:
+#
+# * 漢語拆字字典
+#   https://github.com/kfcd/chaizi
+#
+# * 漢字拼音數據
+#   https://github.com/mozillazg/pinyin-data
+#
+# 部署位置：
+# ~/.config/ibus/rime  (Linux)
+# ~/Library/Rime  (Mac OS)
+# %APPDATA%\\Rime  (Windows)
+#
+# 於重新部署後生效
+#
+
+---
+name: combination_pinyin
+version: "${today.getFullYear() + '.' + ('0' + (today.getMonth() + 1)).substr(-2) + '.' + ('0' + today.getDate()).substr(-2)}"
+sort: by_weight
+use_preset_vocabulary: false
+...
+
+`;
+	let keys = [];
+	for (let key of componentMap.keys()) {
+		keys.push(key);
+	}
+	let newMap = new Map();
+	for (let key of keys.sort()) {
+		newMap.set(key, componentMap.get(key));
+	}
+	newMap.forEach((componentSet, combinedCharacter) => {   //每一个组合字
+		let combinationPinyinArray = [];
+		for (let component of componentSet) {   //每种组合方法
+			let componentPinyinArray = [];
+			let pinyinNotFound = false;
+			for (let character of component.split(' ')) {   //组合拆分的每个字
+				let pinyinSet = pinyinMap.get(character);   //每个字的不同读音
+				if (!pinyinSet) {
+					pinyinNotFound = true;
+					break;
+				}
+				componentPinyinArray.push(Array.from(pinyinSet));
+			}
+			if (pinyinNotFound) {   //没有拼音则跳过
+				continue;
+			}
+			getComponentPinyin(componentPinyinArray).forEach(pinyin => {
+				combinationPinyinArray.push(pinyin.join(''));
+			});
+			
+		}
+		new Set(combinationPinyinArray).forEach(pinyin => {   //排除重复项
+			text += combinedCharacter + '\t' + pinyin + '\n';
+		});
+	});
+	generateFile(text);
+};
+//组合所有拼音
+let getComponentPinyin = characterPinyinArray => {
+	let resultArray = [];
+	characterPinyinArray.forEach(pinyinArray => {
+		if (resultArray.length == 0) {
+			pinyinArray.forEach(pinyin => resultArray.push([pinyin]));
+		} else {
+			let array = [];
+			resultArray.forEach(elem => {
+				pinyinArray.forEach(pinyin => {
+					array.push([...elem, pinyin]);   //展开语法
+				})
+			})
+			resultArray = array;
+		}
+	});
+	return resultArray;
+};
+//生成文件
+let generateFile = text => {
+	let download = document.getElementById('download');
+	download.setAttribute('download', 'combination_pinyin.dict.yaml');
+	download.setAttribute('href', URL.createObjectURL(new Blob([text])));
+	download.click();
+};
+		</script>
+	</body>
+</html>
