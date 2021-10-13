@@ -19,7 +19,7 @@
 * [作为拼音输入方案](#作为拼音输入方案)
 * [作为反查功能](#作为反查功能)
 
-将 `combination_pinyin.dict.yaml` 和 `combination_pinyin.schema.yaml` 两个文件复制到部署位置：
+将 [combination_pinyin.dict.yaml](https://github.com/sakuyaa/rime-combination-pinyin/raw/main/combination_pinyin.dict.yaml) ([CDN](https://cdn.jsdelivr.net/gh/sakuyaa/rime-combination-pinyin@main/combination_pinyin.dict.yaml)) 和 [combination_pinyin.schema.yaml](https://github.com/sakuyaa/rime-combination-pinyin/raw/main/combination_pinyin.schema.yaml) ([CDN](https://cdn.jsdelivr.net/gh/sakuyaa/rime-combination-pinyin@main/combination_pinyin.schema.yaml)) 两个文件复制到部署位置：
 
 ~/.config/ibus/rime  (Linux)
 
@@ -77,11 +77,11 @@ patch:
 
 ## 构建字典
 
-正常情况下，组合字拼音字典直接使用本仓库下的 `combination_pinyin.dict.yaml` 文件即可。
+正常情况下，组合字拼音字典直接使用本仓库下的 [combination_pinyin.dict.yaml](https://github.com/sakuyaa/rime-combination-pinyin/raw/main/combination_pinyin.dict.yaml) ([CDN](https://cdn.jsdelivr.net/gh/sakuyaa/rime-combination-pinyin@main/combination_pinyin.dict.yaml)) 文件即可。
 
 若要自行构建组合字拼音字典，先从以下地址下载 [汉语拆字字典](https://github.com/kfcd/chaizi) 和 [汉字拼音数据](https://github.com/mozillazg/pinyin-data) ：
 
-* 汉语拆字字典：[简体](https://github.com/kfcd/chaizi/raw/master/chaizi-jt.txt)（[CDN](https://cdn.jsdelivr.net/gh/kfcd/chaizi@master/chaizi-jt.txt)）、[繁體](https://github.com/kfcd/chaizi/raw/master/chaizi-ft.txt)（[CDN](https://cdn.jsdelivr.net/gh/kfcd/chaizi@master/chaizi-ft.txt)）
-* 汉字拼音数据：[pinyin.txt](https://github.com/mozillazg/pinyin-data/raw/master/pinyin.txt)（[CDN](https://cdn.jsdelivr.net/gh/mozillazg/pinyin-data@master/pinyin.txt)）
+* 汉语拆字字典：[简体](https://github.com/kfcd/chaizi/raw/master/chaizi-jt.txt) ([CDN](https://cdn.jsdelivr.net/gh/kfcd/chaizi@master/chaizi-jt.txt))、[繁體](https://github.com/kfcd/chaizi/raw/master/chaizi-ft.txt) ([CDN](https://cdn.jsdelivr.net/gh/kfcd/chaizi@master/chaizi-ft.txt))
+* 汉字拼音数据：[pinyin.txt](https://github.com/mozillazg/pinyin-data/raw/master/pinyin.txt) ([CDN](https://cdn.jsdelivr.net/gh/mozillazg/pinyin-data@master/pinyin.txt))
 
-用浏览器打开 `build-dict.html` 网页文件，将上述文件拖放至网页中以生成字典文件。
+下载并用浏览器打开 [build-dict.html](https://github.com/sakuyaa/rime-combination-pinyin/raw/main/build-dict.html) ([CDN](https://cdn.jsdelivr.net/gh/sakuyaa/rime-combination-pinyin@main/build-dict.html)) 网页文件，将上述文件拖放至网页中以生成字典文件。
